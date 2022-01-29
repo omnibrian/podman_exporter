@@ -1,20 +1,9 @@
 name: Test
 
 on:
-  push:
-    paths:
-    - go.sum
-    - go.mod
-    - "**.go"
-    - .github/workflows/test.yml
-    - Makefile
-  pull_request:
-    paths:
-    - go.sum
-    - go.mod
-    - "**.go"
-    - .github/workflows/test.yml
-    - Makefile
+- push
+- pull_request
+- workflow_dispatch
 
 jobs:
   test:

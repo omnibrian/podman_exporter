@@ -1,22 +1,9 @@
 name: Lint
 
 on:
-  push:
-    paths:
-    - go.sum
-    - go.mod
-    - "**.go"
-    - .github/workflows/lint.yml
-    - .golangci.yml
-    - Makefile
-  pull_request:
-    paths:
-    - go.sum
-    - go.mod
-    - "**.go"
-    - .github/workflows/lint.yml
-    - .golangci.yml
-    - Makefile
+- push
+- pull_request
+- workflow_dispatch
 
 jobs:
   lint:
