@@ -1,5 +1,4 @@
 FROM golang:1.17 as builder
-ARG ARCH="amd64"
 
 WORKDIR /workspace
 
@@ -11,13 +10,14 @@ RUN go mod download
 
 COPY . .
 
-RUN GOOS=linux GOARCH=$ARCH make build
+RUN make build
 
 # final image
-FROM gcr.io/distroless/base
+FROM debian:bullseye-slim
 
 WORKDIR /
 
 COPY --from=builder /workspace/bin/podman_exporter /podman_exporter
 
+EXPOSE     9101
 ENTRYPOINT [ "/podman_exporter" ]

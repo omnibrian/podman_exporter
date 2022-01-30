@@ -16,6 +16,18 @@ Help on flags:
 ./podman_exporter --help
 ```
 
+## Usage with Podman
+
+```
+sudo podman run \
+  --detach \
+  --volume /var/run/podman/podman.sock:/var/run/podman/podman.sock:ro \
+  --privileged \
+  --publish 9101:9101 \
+  --name podman-exporter \
+  omnibrian/podman-exporter
+```
+
 ## Development
 
 ### Building

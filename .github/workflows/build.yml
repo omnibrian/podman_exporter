@@ -1,8 +1,11 @@
 name: Build
 
 on:
-- push
-- workflow_dispatch
+  push:
+    branches:
+    - '**'
+    tags:
+    - 'v*'
 
 env:
   DOCKERHUB_USERNAME: omnibrian
@@ -34,6 +37,7 @@ jobs:
     - uses: docker/build-push-action@v2
       with:
         context: .
+        platforms: linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.output.labels }}
