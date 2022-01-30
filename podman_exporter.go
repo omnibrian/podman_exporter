@@ -27,7 +27,35 @@ const (
 	namespace = "podman"
 )
 
+type metricInfo struct {
+	Desc *prometheus.Desc
+	Type prometheus.ValueType
+}
+
+func newContainerMetric(metricName string, docString string, t prometheus.ValueType, constLabels prometheus.Labels) metricInfo {
+	return metricInfo{
+		Desc: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "container", metricName),
+			docString,
+			[]string{"container_id", "name"},
+			constLabels,
+		),
+		Type: t,
+	}
+}
+
 var (
+	cpuAverage  = newContainerMetric("cpu_average", "Average CPU usage.", prometheus.GaugeValue, nil)
+	cpu         = newContainerMetric("cpu", "Current CPU usage.", prometheus.GaugeValue, nil)
+	memUsage    = newContainerMetric("mem_usage", "Current memory usage.", prometheus.GaugeValue, nil)
+	memLimit    = newContainerMetric("mem_limit", "Memory limit.", prometheus.GaugeValue, nil)
+	memPerc     = newContainerMetric("mem_percent", "Percentage of memory used.", prometheus.GaugeValue, nil)
+	netInput    = newContainerMetric("net_input", "Inbound network traffic.", prometheus.GaugeValue, nil)
+	netOutput   = newContainerMetric("net_output", "Outbount network traffic.", prometheus.GaugeValue, nil)
+	blockInput  = newContainerMetric("block_input", "Block traffic in.", prometheus.GaugeValue, nil)
+	blockOutput = newContainerMetric("block_output", "Block traffic out.", prometheus.GaugeValue, nil)
+	pids        = newContainerMetric("pids", "Number of PIDs running.", prometheus.GaugeValue, nil)
+
 	podmanInfo = prometheus.NewDesc(prometheus.BuildFQName(namespace, "version", "info"), "Podman version info.", []string{"version"}, nil)
 	podmanUp   = prometheus.NewDesc(prometheus.BuildFQName(namespace, "", "up"), "Was the last scrape of Podman successful.", nil, nil)
 )
@@ -78,6 +106,18 @@ func NewExporter(podmanSocket string, logger log.Logger) *Exporter {
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- podmanInfo
 	ch <- podmanUp
+
+	ch <- cpuAverage.Desc
+	ch <- cpu.Desc
+	ch <- memUsage.Desc
+	ch <- memLimit.Desc
+	ch <- memPerc.Desc
+	ch <- netInput.Desc
+	ch <- netOutput.Desc
+	ch <- blockInput.Desc
+	ch <- blockOutput.Desc
+	ch <- pids.Desc
+
 	ch <- e.totalScrapes.Desc()
 	ch <- e.scrapeFailures.Desc()
 }
@@ -103,23 +143,47 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) (up float64) {
 	var err error
 
 	var podmanVersion libpod.Version
-	if err = e.podmanGet("v3.0.0/libpod/version", &podmanVersion); err != nil {
+	if err = e.podmanGet("v3.0.0/libpod/version", "", &podmanVersion); err != nil {
 		return 0
 	}
 	ch <- prometheus.MustNewConstMetric(podmanInfo, prometheus.GaugeValue, 1, podmanVersion.Version)
+
+	var podmanStats libpod.ContainerStatsReport
+	query := url.Values{}
+	query.Add("stream", "false")
+	if err = e.podmanGet("v3.0.0/libpod/containers/stats", query.Encode(), &podmanStats); err != nil {
+		return 0
+	}
+	if podmanStats.Error != nil {
+		level.Error(e.logger).Log("msg", "Podman reported an error retrieving container stats", "err", podmanStats.Error)
+		return 0
+	}
+	for _, podmanStat := range podmanStats.Stats {
+		ch <- prometheus.MustNewConstMetric(cpuAverage.Desc, cpuAverage.Type, podmanStat.AvgCPU, podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(cpu.Desc, cpu.Type, podmanStat.CPU, podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(memUsage.Desc, memUsage.Type, float64(podmanStat.MemUsage), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(memLimit.Desc, memLimit.Type, float64(podmanStat.MemLimit), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(memPerc.Desc, memPerc.Type, podmanStat.MemPerc, podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(netInput.Desc, netInput.Type, float64(podmanStat.NetInput), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(netOutput.Desc, netOutput.Type, float64(podmanStat.NetOutput), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(blockInput.Desc, blockInput.Type, float64(podmanStat.BlockInput), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(blockOutput.Desc, blockOutput.Type, float64(podmanStat.BlockOutput), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(pids.Desc, pids.Type, float64(podmanStat.PIDs), podmanStat.ContainerID, podmanStat.Name)
+	}
 
 	return 1
 }
 
 // podmanGet builds and executes http call against the configured client with
 // the given path and unmarshals json output to given interface.
-func (e *Exporter) podmanGet(path string, iface interface{}) (err error) {
+func (e *Exporter) podmanGet(path string, query string, iface interface{}) (err error) {
 	url, err := url.Parse("http://unix")
 	if err != nil {
 		level.Error(e.logger).Log("msg", "failed to parse unix url", "err", err)
 		return err
 	}
 	url.Path = path
+	url.RawQuery = query
 
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {

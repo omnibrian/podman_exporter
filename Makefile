@@ -54,7 +54,7 @@ test: check-fmt vet
 	$(GO) test $(GO_OPTS) $(pkgs)
 
 .PHONY: docker-build
-docker-build: build
+docker-build:
 	@echo ">> building docker image"
 	$(DOCKER) build -t "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" \
 		-f $(DOCKERFILE_PATH) \

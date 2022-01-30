@@ -1,7 +1,5 @@
 package libpod
 
-import "time"
-
 // for podman path: /v3.0.0/libpod/version
 type Version struct {
 	Platform      Platform
@@ -44,6 +42,6 @@ type ContainerStats struct {
 	BlockInput    uint64
 	BlockOutput   uint64
 	PIDs          uint64
-	UpTime        time.Duration
+	UpTime        uint64
 	Duration      uint64
 }
