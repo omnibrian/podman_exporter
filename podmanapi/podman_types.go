@@ -1,4 +1,8 @@
-package libpod
+// These types are built for parsing output from podman socket REST API.
+//
+// Based on documentation at: https://docs.podman.io/en/latest/_static/api.html
+
+package podmanapi
 
 // for podman path: /v3.0.0/libpod/version
 type Version struct {

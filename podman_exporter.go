@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/omnibrian/podman-exporter/libpod"
+	"github.com/omnibrian/podman-exporter/podmanapi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
@@ -45,16 +45,18 @@ func newContainerMetric(metricName string, docString string, t prometheus.ValueT
 }
 
 var (
-	cpuAverage  = newContainerMetric("cpu_average", "Average CPU usage.", prometheus.GaugeValue, nil)
-	cpu         = newContainerMetric("cpu", "Current CPU usage.", prometheus.GaugeValue, nil)
-	memUsage    = newContainerMetric("mem_usage", "Current memory usage.", prometheus.GaugeValue, nil)
-	memLimit    = newContainerMetric("mem_limit", "Memory limit.", prometheus.GaugeValue, nil)
-	memPerc     = newContainerMetric("mem_percent", "Percentage of memory used.", prometheus.GaugeValue, nil)
-	netInput    = newContainerMetric("net_input", "Inbound network traffic.", prometheus.GaugeValue, nil)
-	netOutput   = newContainerMetric("net_output", "Outbount network traffic.", prometheus.GaugeValue, nil)
-	blockInput  = newContainerMetric("block_input", "Block traffic in.", prometheus.GaugeValue, nil)
-	blockOutput = newContainerMetric("block_output", "Block traffic out.", prometheus.GaugeValue, nil)
-	pids        = newContainerMetric("pids", "Number of PIDs running.", prometheus.GaugeValue, nil)
+	cpu            = newContainerMetric("cpu", "Current CPU usage.", prometheus.GaugeValue, nil)
+	cpuAverage     = newContainerMetric("cpu_average", "Average CPU usage.", prometheus.GaugeValue, nil)
+	cpuUsageTotal  = newContainerMetric("cpu_usage_total", "Total CPU usage.", prometheus.GaugeValue, nil)
+	cpuUsageKernel = newContainerMetric("cpu_usage_kernel", "Kernel CPU usage.", prometheus.GaugeValue, nil)
+	memUsage       = newContainerMetric("mem_usage", "Current memory usage.", prometheus.GaugeValue, nil)
+	memLimit       = newContainerMetric("mem_limit", "Memory limit.", prometheus.GaugeValue, nil)
+	memPerc        = newContainerMetric("mem_percent", "Percentage of memory used.", prometheus.GaugeValue, nil)
+	netInput       = newContainerMetric("net_input", "Inbound network traffic.", prometheus.GaugeValue, nil)
+	netOutput      = newContainerMetric("net_output", "Outbount network traffic.", prometheus.GaugeValue, nil)
+	blockInput     = newContainerMetric("block_input", "Block traffic in.", prometheus.GaugeValue, nil)
+	blockOutput    = newContainerMetric("block_output", "Block traffic out.", prometheus.GaugeValue, nil)
+	pids           = newContainerMetric("pids", "Number of PIDs running.", prometheus.GaugeValue, nil)
 
 	podmanInfo = prometheus.NewDesc(prometheus.BuildFQName(namespace, "version", "info"), "Podman version info.", []string{"version"}, nil)
 	podmanUp   = prometheus.NewDesc(prometheus.BuildFQName(namespace, "", "up"), "Was the last scrape of Podman successful.", nil, nil)
@@ -107,8 +109,10 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- podmanInfo
 	ch <- podmanUp
 
-	ch <- cpuAverage.Desc
 	ch <- cpu.Desc
+	ch <- cpuAverage.Desc
+	ch <- cpuUsageTotal.Desc
+	ch <- cpuUsageKernel.Desc
 	ch <- memUsage.Desc
 	ch <- memLimit.Desc
 	ch <- memPerc.Desc
@@ -142,13 +146,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) (up float64) {
 	e.totalScrapes.Inc()
 	var err error
 
-	var podmanVersion libpod.Version
+	var podmanVersion podmanapi.Version
 	if err = e.podmanGet("v3.0.0/libpod/version", "", &podmanVersion); err != nil {
 		return 0
 	}
 	ch <- prometheus.MustNewConstMetric(podmanInfo, prometheus.GaugeValue, 1, podmanVersion.Version)
 
-	var podmanStats libpod.ContainerStatsReport
+	var podmanStats podmanapi.ContainerStatsReport
 	query := url.Values{}
 	query.Add("stream", "false")
 	if err = e.podmanGet("v3.0.0/libpod/containers/stats", query.Encode(), &podmanStats); err != nil {
@@ -159,8 +163,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) (up float64) {
 		return 0
 	}
 	for _, podmanStat := range podmanStats.Stats {
-		ch <- prometheus.MustNewConstMetric(cpuAverage.Desc, cpuAverage.Type, podmanStat.AvgCPU, podmanStat.ContainerID, podmanStat.Name)
 		ch <- prometheus.MustNewConstMetric(cpu.Desc, cpu.Type, podmanStat.CPU, podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(cpuAverage.Desc, cpuAverage.Type, podmanStat.AvgCPU, podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(cpuUsageTotal.Desc, cpuUsageTotal.Type, float64(podmanStat.CPUNano), podmanStat.ContainerID, podmanStat.Name)
+		ch <- prometheus.MustNewConstMetric(cpuUsageKernel.Desc, cpuUsageKernel.Type, float64(podmanStat.CPUSystemNano), podmanStat.ContainerID, podmanStat.Name)
 		ch <- prometheus.MustNewConstMetric(memUsage.Desc, memUsage.Type, float64(podmanStat.MemUsage), podmanStat.ContainerID, podmanStat.Name)
 		ch <- prometheus.MustNewConstMetric(memLimit.Desc, memLimit.Type, float64(podmanStat.MemLimit), podmanStat.ContainerID, podmanStat.Name)
 		ch <- prometheus.MustNewConstMetric(memPerc.Desc, memPerc.Type, podmanStat.MemPerc, podmanStat.ContainerID, podmanStat.Name)
