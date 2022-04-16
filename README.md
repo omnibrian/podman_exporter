@@ -2,6 +2,12 @@
 
 This is a simple server that uses libpod from podman to scrape data from podman-stats(1) and exports them via HTTP for Prometheus consumption.
 
+**Note:** This exporter makes all podman requests through the podman unix socket which requires that the podman systemd service is started to create that socket:
+
+```
+systemctl enable --now podman.socket
+```
+
 ## Getting Started
 
 To run it:

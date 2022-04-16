@@ -1,0 +1,48 @@
+# HELP podman_container_block_input Block traffic in.
+# TYPE podman_container_block_input gauge
+podman_container_block_input{container_id="podman_exporter_id",name="podman_exporter_name"} 123
+# HELP podman_container_block_output Block traffic out.
+# TYPE podman_container_block_output gauge
+podman_container_block_output{container_id="podman_exporter_id",name="podman_exporter_name"} 321
+# HELP podman_container_cpu Current CPU usage.
+# TYPE podman_container_cpu gauge
+podman_container_cpu{container_id="podman_exporter_id",name="podman_exporter_name"} 0.06
+# HELP podman_container_cpu_average Average CPU usage.
+# TYPE podman_container_cpu_average gauge
+podman_container_cpu_average{container_id="podman_exporter_id",name="podman_exporter_name"} 0.05
+# HELP podman_container_cpu_usage_kernel Kernel CPU usage.
+# TYPE podman_container_cpu_usage_kernel gauge
+podman_container_cpu_usage_kernel{container_id="podman_exporter_id",name="podman_exporter_name"} 8765
+# HELP podman_container_cpu_usage_total Total CPU usage.
+# TYPE podman_container_cpu_usage_total gauge
+podman_container_cpu_usage_total{container_id="podman_exporter_id",name="podman_exporter_name"} 8.765e+06
+# HELP podman_container_mem_limit Memory limit.
+# TYPE podman_container_mem_limit gauge
+podman_container_mem_limit{container_id="podman_exporter_id",name="podman_exporter_name"} 8.589934592e+09
+# HELP podman_container_mem_percent Percentage of memory used.
+# TYPE podman_container_mem_percent gauge
+podman_container_mem_percent{container_id="podman_exporter_id",name="podman_exporter_name"} 0.00123
+# HELP podman_container_mem_usage Current memory usage.
+# TYPE podman_container_mem_usage gauge
+podman_container_mem_usage{container_id="podman_exporter_id",name="podman_exporter_name"} 2.5e+06
+# HELP podman_container_net_input Inbound network traffic.
+# TYPE podman_container_net_input gauge
+podman_container_net_input{container_id="podman_exporter_id",name="podman_exporter_name"} 789
+# HELP podman_container_net_output Outbount network traffic.
+# TYPE podman_container_net_output gauge
+podman_container_net_output{container_id="podman_exporter_id",name="podman_exporter_name"} 987
+# HELP podman_container_pids Number of PIDs running.
+# TYPE podman_container_pids gauge
+podman_container_pids{container_id="podman_exporter_id",name="podman_exporter_name"} 6
+# HELP podman_exporter_scrape_failures_total Current total podman scrape failures.
+# TYPE podman_exporter_scrape_failures_total counter
+podman_exporter_scrape_failures_total 0
+# HELP podman_exporter_scrapes_total Current total podman scrapes.
+# TYPE podman_exporter_scrapes_total counter
+podman_exporter_scrapes_total 4
+# HELP podman_up Was the last scrape of Podman successful.
+# TYPE podman_up gauge
+podman_up 1
+# HELP podman_version_info Podman version info.
+# TYPE podman_version_info gauge
+podman_version_info{version="3.4.2"} 1

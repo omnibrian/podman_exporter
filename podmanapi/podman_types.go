@@ -24,7 +24,6 @@ type Platform struct {
 
 // for podman path: /v3.0.0/libpod/containers/stats
 type ContainerStatsReport struct {
-	Error error
 	Stats []ContainerStats
 }
 

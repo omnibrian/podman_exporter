@@ -1,0 +1,12 @@
+# HELP podman_exporter_scrape_failures_total Current total podman scrape failures.
+# TYPE podman_exporter_scrape_failures_total counter
+podman_exporter_scrape_failures_total 0
+# HELP podman_exporter_scrapes_total Current total podman scrapes.
+# TYPE podman_exporter_scrapes_total counter
+podman_exporter_scrapes_total 4
+# HELP podman_up Was the last scrape of Podman successful.
+# TYPE podman_up gauge
+podman_up 1
+# HELP podman_version_info Podman version info.
+# TYPE podman_version_info gauge
+podman_version_info{version="3.4.2"} 1

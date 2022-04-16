@@ -73,17 +73,23 @@ type Exporter struct {
 	logger                       log.Logger
 }
 
-// NewExporter returns and initialized Exporter.
-func NewExporter(podmanSocket string, logger log.Logger) *Exporter {
-	return &Exporter{
-		client: http.Client{
-			Transport: &http.Transport{
-				DisableCompression: true,
-				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-					return net.Dial("unix", podmanSocket)
-				},
+// NewExporter returns an initialized Exporter.
+func NewExporter(podmanSocket string, logger log.Logger) (*Exporter, error) {
+	if _, err := os.Stat(podmanSocket); err != nil {
+		return nil, err
+	}
+
+	client := http.Client{
+		Transport: &http.Transport{
+			DisableCompression: true,
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return net.Dial("unix", podmanSocket)
 			},
 		},
+	}
+
+	return &Exporter{
+		client: client,
 		up: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "up",
@@ -100,7 +106,7 @@ func NewExporter(podmanSocket string, logger log.Logger) *Exporter {
 			Help:      "Current total podman scrape failures.",
 		}),
 		logger: logger,
-	}
+	}, nil
 }
 
 // Describe describes all the metrics ever exported by the Podman exporter. It
@@ -156,10 +162,6 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) (up float64) {
 	query := url.Values{}
 	query.Add("stream", "false")
 	if err = e.podmanGet("v3.0.0/libpod/containers/stats", query.Encode(), &podmanStats); err != nil {
-		return 0
-	}
-	if podmanStats.Error != nil {
-		level.Error(e.logger).Log("msg", "Podman reported an error retrieving container stats", "err", podmanStats.Error)
 		return 0
 	}
 	for _, podmanStat := range podmanStats.Stats {
@@ -262,7 +264,11 @@ func main() {
 	level.Info(logger).Log("msg", "Starting podman_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "context", version.BuildContext())
 
-	exporter := NewExporter(*podmanSocket, logger)
+	exporter, err := NewExporter(*podmanSocket, logger)
+	if err != nil {
+		level.Error(logger).Log("msg", "Error starting podman client, is the 'podman.socket' service running?", "err", err)
+		os.Exit(1)
+	}
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(version.NewCollector("podman_exporter"))
 
